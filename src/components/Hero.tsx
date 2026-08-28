@@ -1,100 +1,124 @@
-import { Activity, Wind, Gauge, Thermometer, Radiation, Sun } from 'lucide-react';
-import { telemetryData } from '@/data/mockData';
-
-const readingIcons: Record<string, typeof Activity> = {
-  Temperature: Thermometer,
-  Wind: Wind,
-  Barometer: Gauge,
-  'Total Column Ozone': Radiation,
-  'UV Index': Sun,
-  'Permafrost Temp': Thermometer,
-  'Sea Ice Extent': Activity,
-};
+import React from 'react';
+import { ShieldAlert, Compass, Activity, Thermometer, Wind, Gauge, Sun } from 'lucide-react';
 
 export default function Hero() {
   return (
-    <section id="hero" className="relative pt-16 overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 aurora-bg pointer-events-none" />
-      <div className="aurora-layer">
-        <div className="aurora-stars" />
-        <div className="aurora-band aurora-band-1" />
-        <div className="aurora-band aurora-band-2" />
-        <div className="aurora-band aurora-band-3" />
-      </div>
-      <div className="absolute inset-0 grid-pattern opacity-20 pointer-events-none" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-frost-cyan/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-polar-bg pointer-events-none" />
+    <div className="relative min-h-[90vh] bg-[#070b19] text-white flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 overflow-hidden">
+      {/* Cinematic Iceberg Background with Dark Polar Gradient Overlay */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center z-0 opacity-40 mix-blend-luminosity scale-105 transition-transform duration-1000"
+        style={{
+          backgroundImage: `linear-gradient(to bottom, rgba(7, 11, 25, 0.6) 0%, rgba(7, 11, 25, 0.95) 100%), url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=2000&q=80')`
+        }}
+      />
 
-      <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
-        {/* Headline */}
-        <div className="text-center max-w-4xl mx-auto mb-14">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-6 rounded-full glass-panel border border-frost-cyan/20">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-frost-cyan opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-frost-cyan"></span>
-            </span>
-            <span className="text-xs font-mono text-frost-cyan tracking-widest">
-              LIVE POLAR TELEMETRY ONLINE
-            </span>
-          </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.1] mb-6">
-            ICEBYTE: Unlocking Earth's{' '}
-            <span className="bg-gradient-to-r from-frost-cyan via-frost-blue to-frost-glow bg-clip-text text-transparent glow-text">
-              Polar Archive
-            </span>
-          </h1>
-          <p className="text-base sm:text-lg text-slate-100 max-w-3xl mx-auto leading-relaxed drop-shadow-lg">
-            Real-time telemetry, deep-core paleoclimate records, and unified scientific data from
-            India's research expeditions across Antarctica, the Arctic, and the Himalayas.
-          </p>
+      {/* Decorative Glow Grid */}
+      <div className="absolute inset-0 bg-[radial-gradient(#06b6d4_1px,transparent_1px)] [background-size:32px_32px] opacity-15 pointer-events-none z-0" />
+
+      {/* Main Content */}
+      <div className="relative z-10 max-w-5xl mx-auto text-center pt-20 pb-12">
+        {/* Live Status Pill */}
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-950/40 backdrop-blur-md text-cyan-300 text-xs font-semibold tracking-wider uppercase mb-6 shadow-lg shadow-cyan-950/50">
+          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+          <span>Live Polar Telemetry Online</span>
         </div>
 
-        {/* Telemetry Ribbon */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {telemetryData.map((card) => (
-            <div
-              key={card.id}
-              className="glass-panel rounded-2xl p-5 hover:border-frost-cyan/30 transition-all duration-300 group animate-float-up"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-semibold text-white text-lg">{card.station}</h3>
-                  <p className="text-xs font-mono text-slate-500 mt-0.5">{card.region}</p>
-                </div>
-                <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-                  </span>
-                  <span className="text-[10px] font-mono text-emerald-400 tracking-wider">
-                    {card.status.toUpperCase()}
-                  </span>
-                </div>
+        {/* Crisp Gradient Headline (No Blur) */}
+        <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-6">
+          ICEBYTE: Unlocking Earth’s{' '}
+          <span className="bg-gradient-to-r from-cyan-300 via-sky-200 to-blue-400 bg-clip-text text-transparent drop-shadow-[0_0_25px_rgba(6,182,212,0.4)]">
+            Polar Archive
+          </span>
+        </h1>
+
+        <p className="max-w-3xl mx-auto text-base sm:text-lg md:text-xl text-slate-300 leading-relaxed font-light mb-12">
+          Real-time telemetry, deep-core paleoclimate records, and unified scientific data from India’s research expeditions across Antarctica, the Arctic, and the Himalayas.
+        </p>
+
+        {/* Station Telemetry Quick Ribbon */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-4xl mx-auto text-left">
+          {/* Maitri Card */}
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-700/60 backdrop-blur-md hover:border-cyan-500/50 transition duration-300 shadow-xl">
+            <div className="flex justify-between items-center mb-3">
+              <div>
+                <h3 className="font-semibold text-white text-base">Maitri Station</h3>
+                <p className="text-xs text-slate-400">Antarctica (70°45′S)</p>
               </div>
-              <div className="space-y-3">
-                {card.readings.map((reading) => {
-                  const Icon = readingIcons[reading.label] || Activity;
-                  return (
-                    <div
-                      key={reading.label}
-                      className="flex items-center justify-between py-2 px-3 rounded-lg bg-polar-bg/40 border border-polar-border/50 group-hover:border-frost-cyan/10 transition-colors"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon className="w-4 h-4 text-frost-cyan/70" />
-                        <span className="text-sm text-slate-400">{reading.label}</span>
-                      </div>
-                      <span className="font-mono text-sm text-white font-medium">
-                        {reading.value}
-                      </span>
-                    </div>
-                  );
-                })}
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                ACTIVE
+              </span>
+            </div>
+            <div className="space-y-1.5 text-xs text-slate-300">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-slate-400"><Thermometer className="w-3.5 h-3.5 text-cyan-400" /> Temp:</span>
+                <span className="font-mono text-cyan-200">-18°C</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-slate-400"><Wind className="w-3.5 h-3.5 text-cyan-400" /> Wind:</span>
+                <span className="font-mono text-cyan-200">32 kts ENE</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-slate-400"><Gauge className="w-3.5 h-3.5 text-cyan-400" /> Barometer:</span>
+                <span className="font-mono text-cyan-200">986 hPa</span>
               </div>
             </div>
-          ))}
+          </div>
+
+          {/* Bharati Card */}
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-700/60 backdrop-blur-md hover:border-cyan-500/50 transition duration-300 shadow-xl">
+            <div className="flex justify-between items-center mb-3">
+              <div>
+                <h3 className="font-semibold text-white text-base">Bharati Station</h3>
+                <p className="text-xs text-slate-400">Antarctica (69°24′S)</p>
+              </div>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                ACTIVE
+              </span>
+            </div>
+            <div className="space-y-1.5 text-xs text-slate-300">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-slate-400"><Thermometer className="w-3.5 h-3.5 text-cyan-400" /> Temp:</span>
+                <span className="font-mono text-cyan-200">-14°C</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-slate-400"><Activity className="w-3.5 h-3.5 text-cyan-400" /> Total Ozone:</span>
+                <span className="font-mono text-cyan-200">284 DU</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-slate-400"><Sun className="w-3.5 h-3.5 text-cyan-400" /> UV Index:</span>
+                <span className="font-mono text-emerald-300">Low</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Himadri Card */}
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-700/60 backdrop-blur-md hover:border-cyan-500/50 transition duration-300 shadow-xl">
+            <div className="flex justify-between items-center mb-3">
+              <div>
+                <h3 className="font-semibold text-white text-base">Himadri Station</h3>
+                <p className="text-xs text-slate-400">Arctic (Ny-Ålesund, Svalbard)</p>
+              </div>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                ACTIVE
+              </span>
+            </div>
+            <div className="space-y-1.5 text-xs text-slate-300">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-slate-400"><Thermometer className="w-3.5 h-3.5 text-cyan-400" /> Temp:</span>
+                <span className="font-mono text-cyan-200">-4°C</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-slate-400"><Compass className="w-3.5 h-3.5 text-cyan-400" /> Permafrost:</span>
+                <span className="font-mono text-cyan-200">-2.1°C</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-slate-400"><ShieldAlert className="w-3.5 h-3.5 text-cyan-400" /> Sea Ice:</span>
+                <span className="font-mono text-amber-300">Moderate</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

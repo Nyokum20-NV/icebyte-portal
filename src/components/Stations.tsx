@@ -1,223 +1,270 @@
-import { useState } from 'react';
-import { MapPin, X, Thermometer, Wind, Cloud, FileText, Navigation } from 'lucide-react';
-import { stations, type StationInfo } from '@/data/mockData';
+import React, { useState, useEffect, useRef } from 'react';
+import { MapPin, Thermometer, Wind, Compass, Radio, ExternalLink } from 'lucide-react';
+
+interface Station {
+  id: string;
+  name: string;
+  realm: string;
+  coords: string;
+  lat: number;
+  lng: number;
+  temp: string;
+  wind: string;
+  established: string;
+  mission: string;
+  desc: string;
+  image: string;
+}
+
+const stations: Station[] = [
+  {
+    id: 'maitri',
+    name: 'Maitri Station',
+    realm: 'Antarctica (Schirmacher Oasis)',
+    coords: '70°45′58″ S, 11°44′09″ E',
+    lat: -70.766,
+    lng: 11.735,
+    temp: '-18°C',
+    wind: '32 kts ENE',
+    established: '1989',
+    mission: 'Atmospheric Sciences, Geomagnetism & Paleoclimatology',
+    desc: 'India’s second permanent Antarctic research base, featuring clean water access from Lake Priyadarshini.',
+    image: 'https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?auto=format&fit=crop&w=600&q=80'
+  },
+  {
+    id: 'bharati',
+    name: 'Bharati Station',
+    realm: 'Antarctica (Larsemann Hills)',
+    coords: '69°24′28″ S, 76°11′14″ E',
+    lat: -69.407,
+    lng: 76.187,
+    temp: '-14°C',
+    wind: '22 kts NE',
+    established: '2012',
+    mission: 'Oceanography, Continental Breakup Studies & Satellite Telemetry',
+    desc: 'State-of-the-art modular station designed to withstand extreme katabatic winds and minimize ecological footprint.',
+    image: 'https://images.unsplash.com/photo-1483181957632-8bda974cbc91?auto=format&fit=crop&w=600&q=80'
+  },
+  {
+    id: 'himadri',
+    name: 'Himadri Station',
+    realm: 'Arctic (Ny-Ålesund, Svalbard)',
+    coords: '78°55′00″ N, 11°56′00″ E',
+    lat: 78.923,
+    lng: 11.928,
+    temp: '-4°C',
+    wind: '14 kts W',
+    established: '2008',
+    mission: 'Aerosol Optical Depth, Arctic Glaciology & Monsoon Teleconnection',
+    desc: 'India’s northernmost permanent research station located 1,200 km from the North Pole.',
+    image: 'https://images.unsplash.com/photo-1517999144091-3d9dca6d1e43?auto=format&fit=crop&w=600&q=80'
+  },
+  {
+    id: 'indarc',
+    name: 'IndARC Observatory',
+    realm: 'Arctic (Kongsfjorden Fjord)',
+    coords: '78°59′00″ N, 12°00′00″ E',
+    lat: 78.983,
+    lng: 12.0,
+    temp: '-1.8°C (Subsurface)',
+    wind: 'Subsea Mooring',
+    established: '2014',
+    mission: 'Continuous Subsurface Oceanographic & Arctic Current Profiling',
+    desc: 'India’s first multi-sensor moored underwater observatory in the Arctic fjord.',
+    image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80'
+  }
+];
 
 export default function Stations() {
-  const [selected, setSelected] = useState<StationInfo | null>(null);
+  const [activeStation, setActiveStation] = useState<Station>(stations[0]);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const rotationRef = useRef(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationFrameId: number;
+
+    const render = () => {
+      rotationRef.current += 0.005;
+      const width = canvas.width;
+      const height = canvas.height;
+      const radius = Math.min(width, height) * 0.38;
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Outer Atmosphere Glow
+      const glowGrad = ctx.createRadialGradient(centerX, centerY, radius * 0.8, centerX, centerY, radius * 1.25);
+      glowGrad.addColorStop(0, 'rgba(6, 182, 212, 0.2)');
+      glowGrad.addColorStop(1, 'rgba(7, 11, 25, 0)');
+      ctx.fillStyle = glowGrad;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius * 1.25, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Earth Sphere Background
+      const sphereGrad = ctx.createRadialGradient(centerX - radius * 0.3, centerY - radius * 0.3, radius * 0.1, centerX, centerY, radius);
+      sphereGrad.addColorStop(0, '#1e293b');
+      sphereGrad.addColorStop(0.7, '#0f172a');
+      sphereGrad.addColorStop(1, '#020617');
+      ctx.fillStyle = sphereGrad;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.4)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Latitude and Longitude Grid Lines
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+      ctx.lineWidth = 1;
+
+      for (let lat = -60; lat <= 60; lat += 30) {
+        const y = centerY + Math.sin((lat * Math.PI) / 180) * radius;
+        const rLat = Math.cos((lat * Math.PI) / 180) * radius;
+        ctx.beginPath();
+        ctx.ellipse(centerX, y, rLat, rLat * 0.3, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      for (let i = 0; i < 6; i++) {
+        const angle = rotationRef.current + (i * Math.PI) / 3;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, radius * Math.abs(Math.cos(angle)), radius, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Plot Stations on 3D Sphere Projection
+      stations.forEach((st) => {
+        const phi = (90 - st.lat) * (Math.PI / 180);
+        const theta = (st.lng * Math.PI) / 180 + rotationRef.current;
+
+        const x = centerX + radius * Math.sin(phi) * Math.cos(theta);
+        const y = centerY - radius * Math.cos(phi);
+        const isVisible = Math.sin(phi) * Math.sin(theta) >= -0.2;
+
+        if (isVisible) {
+          const isSelected = activeStation.id === st.id;
+          
+          // Marker Pulse
+          ctx.beginPath();
+          ctx.arc(x, y, isSelected ? 8 : 4, 0, Math.PI * 2);
+          ctx.fillStyle = isSelected ? '#38bdf8' : '#06b6d4';
+          ctx.shadowColor = '#38bdf8';
+          ctx.shadowBlur = isSelected ? 15 : 6;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          // Label
+          ctx.fillStyle = isSelected ? '#ffffff' : '#94a3b8';
+          ctx.font = isSelected ? 'bold 12px Inter, sans-serif' : '10px Inter, sans-serif';
+          ctx.fillText(st.name.split(' ')[0], x + 10, y + 4);
+        }
+      });
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [activeStation]);
 
   return (
-    <section id="stations" className="relative py-20">
-      <div className="absolute inset-0 grid-pattern opacity-10 pointer-events-none" />
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 relative">
-        {/* Section Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-[1px] bg-frost-cyan" />
-            <span className="text-xs font-mono text-frost-cyan tracking-widest">STATION NETWORK</span>
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">Polar Station Explorer</h2>
-          <p className="text-slate-400 max-w-2xl">
-            Interactive map of India's polar research stations. Click any pin to view coordinates,
-            mission objectives, live weather, and recent publications.
+    <div className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-white">
+      <div className="text-center mb-12">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-500/30 bg-cyan-950/40 text-cyan-300 text-xs font-semibold uppercase tracking-wider mb-3">
+          <Radio className="w-3.5 h-3.5 text-cyan-400" />
+          Global Polar Observation Grid
+        </div>
+        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+          Interactive 3D Station Telemetry
+        </h2>
+        <p className="mt-2 text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
+          Select an Indian polar research station to track coordinates, environmental sensors, and scientific mission profiles.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-slate-900/40 border border-slate-800 p-6 sm:p-8 rounded-2xl backdrop-blur-md shadow-2xl">
+        {/* Interactive 3D Globe Canvas (7 Cols) */}
+        <div className="lg:col-span-7 flex flex-col items-center justify-center relative">
+          <canvas
+            ref={canvasRef}
+            width={480}
+            height={480}
+            className="w-full max-w-[420px] aspect-square cursor-grab active:cursor-grabbing"
+          />
+          <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
+            <Compass className="w-3.5 h-3.5 text-cyan-400" />
+            Live rotating projection (Antarctic & Arctic observation networks)
           </p>
         </div>
 
-        {/* Map */}
-        <div className="glass-panel rounded-2xl overflow-hidden">
-          <div className="relative w-full aspect-[16/9] bg-polar-bg">
-            {/* World map background */}
-            <div className="absolute inset-0 grid-pattern opacity-20" />
-            <div className="absolute inset-0 aurora-bg opacity-40" />
-
-            {/* Latitude/Longitude lines */}
-            <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-              {[20, 40, 60, 80].map((y) => (
-                <line
-                  key={`h-${y}`}
-                  x1="0"
-                  y1={`${y}%`}
-                  x2="100%"
-                  y2={`${y}%`}
-                  stroke="#1c2748"
-                  strokeWidth="0.5"
-                  strokeDasharray="4 4"
-                />
-              ))}
-              {[20, 40, 60, 80].map((x) => (
-                <line
-                  key={`v-${x}`}
-                  x1={`${x}%`}
-                  y1="0"
-                  x2={`${x}%`}
-                  y2="100%"
-                  stroke="#1c2748"
-                  strokeWidth="0.5"
-                  strokeDasharray="4 4"
-                />
-              ))}
-            </svg>
-
-            {/* Simplified continent shapes */}
-            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 56" preserveAspectRatio="none">
-              {/* Northern continents */}
-              <path d="M8,8 Q15,6 25,8 T45,9 L48,16 Q40,18 30,16 L15,15 Z" fill="#0d1326" stroke="#1c2748" strokeWidth="0.3" opacity="0.6" />
-              <path d="M45,10 Q55,8 70,10 L72,16 Q60,18 50,16 Z" fill="#0d1326" stroke="#1c2748" strokeWidth="0.3" opacity="0.6" />
-              {/* Equatorial/Africa */}
-              <path d="M48,20 Q55,18 58,25 L56,32 Q52,34 50,30 Z" fill="#0d1326" stroke="#1c2748" strokeWidth="0.3" opacity="0.6" />
-              {/* Southern continents */}
-              <path d="M30,35 Q40,33 50,36 L52,44 Q42,46 35,42 Z" fill="#0d1326" stroke="#1c2748" strokeWidth="0.3" opacity="0.6" />
-              <path d="M75,38 Q82,36 85,42 L83,48 Q78,49 76,45 Z" fill="#0d1326" stroke="#1c2748" strokeWidth="0.3" opacity="0.6" />
-              {/* Antarctica strip */}
-              <path d="M5,50 Q50,48 95,50 L95,56 L5,56 Z" fill="#0d1326" stroke="#1c2748" strokeWidth="0.3" opacity="0.5" />
-            </svg>
-
-            {/* Station Pins */}
-            {stations.map((station) => (
+        {/* Station Detail Drawer & Selector (5 Cols) */}
+        <div className="lg:col-span-5 space-y-6">
+          {/* Station Selection Buttons */}
+          <div className="grid grid-cols-2 gap-2">
+            {stations.map((st) => (
               <button
-                key={station.name}
-                onClick={() => setSelected(station)}
-                className="absolute -translate-x-1/2 -translate-y-1/2 group"
-                style={{ left: `${station.mapX}%`, top: `${station.mapY}%` }}
+                key={st.id}
+                onClick={() => setActiveStation(st)}
+                className={`px-3.5 py-2.5 rounded-lg text-xs font-semibold text-left transition border ${
+                  activeStation.id === st.id
+                    ? 'bg-cyan-950/80 border-cyan-500 text-cyan-200 shadow-md shadow-cyan-950'
+                    : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800'
+                }`}
               >
-                <div className="relative">
-                  <span className="absolute inset-0 rounded-full bg-frost-cyan/30 animate-ping" style={{ width: '24px', height: '24px', top: '-12px', left: '-12px' }} />
-                  <div className="relative w-3 h-3 rounded-full bg-frost-cyan border-2 border-white shadow-lg" style={{ boxShadow: '0 0 12px rgba(6,182,212,0.8)' }} />
-                </div>
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-md bg-polar-bg/80 border border-polar-border text-[10px] font-mono text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {station.name}
-                </div>
+                <span className="block">{st.name}</span>
+                <span className="text-[10px] text-slate-400 font-normal">{st.realm.split(' ')[0]}</span>
               </button>
             ))}
-
-            {/* Legend */}
-            <div className="absolute bottom-4 left-4 glass-panel rounded-lg px-3 py-2 flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-frost-cyan" style={{ boxShadow: '0 0 8px rgba(6,182,212,0.8)' }} />
-              <span className="text-xs font-mono text-slate-400">Research Station</span>
-            </div>
-            <div className="absolute bottom-4 right-4 glass-panel rounded-lg px-3 py-2">
-              <span className="text-[10px] font-mono text-slate-500">Simplified projection · Not to scale</span>
-            </div>
           </div>
-        </div>
 
-        {/* Station cards below map */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
-          {stations.map((station) => (
-            <button
-              key={station.name}
-              onClick={() => setSelected(station)}
-              className="glass-panel rounded-xl p-4 hover:border-frost-cyan/30 transition-all text-left group"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <MapPin className="w-4 h-4 text-frost-cyan" />
-                <span className="font-semibold text-white group-hover:text-frost-cyan transition-colors">
-                  {station.name}
+          {/* Active Station Card */}
+          <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-700/80 space-y-4">
+            <div className="relative h-36 rounded-lg overflow-hidden border border-slate-700/60">
+              <img
+                src={activeStation.image}
+                alt={activeStation.name}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
+              <div className="absolute bottom-2 left-3 right-3 flex justify-between items-end">
+                <div>
+                  <h4 className="text-base font-bold text-white">{activeStation.name}</h4>
+                  <p className="text-xs text-slate-300">{activeStation.realm}</p>
+                </div>
+                <span className="text-[10px] bg-slate-900/80 px-2 py-0.5 rounded border border-slate-700 text-cyan-300">
+                  Est. {activeStation.established}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-mono">{station.coords}</p>
-              <p className="text-xs text-slate-400 mt-1">{station.realm}</p>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Station Detail Modal */}
-      {selected && (
-        <div
-          className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setSelected(null)}
-        >
-          <div
-            className="w-full max-w-2xl glass-panel rounded-2xl border border-frost-cyan/20 overflow-hidden max-h-[85vh] overflow-y-auto animate-scale-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="relative px-6 py-5 border-b border-polar-border bg-gradient-to-r from-frost-cyan/5 to-transparent">
-              <button
-                onClick={() => setSelected(null)}
-                className="absolute top-4 right-4 p-2 hover:bg-polar-card rounded-md transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-lg bg-frost-cyan/10 border border-frost-cyan/30 flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-frost-cyan" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">{selected.name} Station</h3>
-                  <span className="text-xs font-mono text-frost-cyan">{selected.realm}</span>
-                </div>
-              </div>
             </div>
 
-            <div className="p-6 space-y-5">
-              {/* Coordinates & Year */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="glass-panel rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Navigation className="w-3.5 h-3.5 text-frost-cyan" />
-                    <span className="text-[10px] font-mono text-slate-500">COORDINATES</span>
-                  </div>
-                  <p className="text-sm text-white font-mono">{selected.coords}</p>
-                </div>
-                <div className="glass-panel rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-mono text-slate-500">ESTABLISHED</span>
-                  </div>
-                  <p className="text-sm text-white font-mono">{selected.established}</p>
-                </div>
-              </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              {activeStation.desc}
+            </p>
 
-              {/* Mission */}
+            {/* Quick Metrics */}
+            <div className="grid grid-cols-2 gap-3 pt-2 text-xs border-t border-slate-800">
               <div>
-                <span className="text-[10px] font-mono text-slate-500 block mb-2">MISSION OBJECTIVES</span>
-                <p className="text-sm text-slate-300 leading-relaxed">{selected.mission}</p>
+                <span className="text-slate-400 block text-[11px]">Coordinates:</span>
+                <span className="font-mono text-cyan-300 text-[11px]">{activeStation.coords}</span>
               </div>
-
-              {/* Weather Widget */}
               <div>
-                <span className="text-[10px] font-mono text-slate-500 block mb-2">CURRENT WEATHER</span>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="glass-panel rounded-lg p-3 text-center">
-                    <Thermometer className="w-4 h-4 text-frost-cyan mx-auto mb-1" />
-                    <p className="text-lg font-mono text-white">{selected.weather.temp}</p>
-                    <p className="text-[10px] text-slate-500">Temp</p>
-                  </div>
-                  <div className="glass-panel rounded-lg p-3 text-center">
-                    <Wind className="w-4 h-4 text-frost-cyan mx-auto mb-1" />
-                    <p className="text-sm font-mono text-white">{selected.weather.wind}</p>
-                    <p className="text-[10px] text-slate-500">Wind</p>
-                  </div>
-                  <div className="glass-panel rounded-lg p-3 text-center">
-                    <Cloud className="w-4 h-4 text-frost-cyan mx-auto mb-1" />
-                    <p className="text-sm text-white">{selected.weather.condition}</p>
-                    <p className="text-[10px] text-slate-500">Sky</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Publications */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <FileText className="w-3.5 h-3.5 text-frost-cyan" />
-                  <span className="text-[10px] font-mono text-slate-500">RECENT PUBLICATIONS</span>
-                </div>
-                <div className="space-y-2">
-                  {selected.publications.map((pub, i) => (
-                    <div
-                      key={i}
-                      className="flex items-start gap-2 p-3 rounded-lg bg-polar-bg/40 border border-polar-border/50 hover:border-frost-cyan/20 transition-colors"
-                    >
-                      <span className="text-xs font-mono text-frost-cyan/60 mt-0.5">{i + 1}.</span>
-                      <span className="text-sm text-slate-300">{pub}</span>
-                    </div>
-                  ))}
-                </div>
+                <span className="text-slate-400 block text-[11px]">Primary Mission:</span>
+                <span className="text-slate-200 text-[11px]">{activeStation.mission}</span>
               </div>
             </div>
           </div>
         </div>
-      )}
-    </section>
+      </div>
+    </div>
   );
 }
