@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Thermometer, Wind, Compass, Radio, ExternalLink } from 'lucide-react';
+import { MapPin, Thermometer, Wind, Compass, Radio, ExternalLink, RotateCcw } from 'lucide-react';
 
 interface Station {
   id: string;
@@ -75,10 +75,58 @@ const stations: Station[] = [
   }
 ];
 
+// Simplified Continent Polygonal Outlines [Lat, Lng]
+const CONTINENT_PATHS: [number, number][][] = [
+  // Antarctica Outline
+  [[-70, 0], [-68, 30], [-66, 60], [-68, 90], [-67, 120], [-70, 150], [-72, 180], [-74, -150], [-72, -120], [-65, -90], [-64, -60], [-70, -30], [-70, 0]],
+  // Africa Outline
+  [[35, -5], [37, 10], [31, 32], [12, 43], [-10, 40], [-34, 18], [-34, 26], [-15, 12], [5, 1], [15, -17], [30, -10], [35, -5]],
+  // Eurasia (Europe & Asia + India)
+  [[36, -9], [43, 5], [54, 8], [60, 28], [70, 40], [72, 120], [60, 160], [38, 140], [22, 114], [10, 105], [8, 77], [22, 69], [25, 60], [35, 45], [40, 26], [36, -9]],
+  // North America & Greenland
+  [[75, -40], [82, -20], [70, -50], [60, -65], [45, -60], [25, -80], [15, -85], [18, -105], [30, -115], [50, -125], [65, -165], [72, -155], [75, -95], [75, -40]],
+  // South America
+  [[12, -75], [5, -50], [-10, -35], [-23, -43], [-55, -68], [-45, -75], [-20, -70], [-5, -80], [12, -75]],
+  // Australia
+  [[-12, 130], [-15, 145], [-28, 153], [-38, 145], [-35, 115], [-22, 114], [-12, 130]]
+];
+
 export default function Stations() {
   const [activeStation, setActiveStation] = useState<Station>(stations[0]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [rotX, setRotX] = useState(0.35); // tilt
+  const [rotY, setRotY] = useState(0);    // spin
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const rotationRef = useRef(0);
+  const targetRotY = useRef<number | null>(null);
+  const targetRotX = useRef<number | null>(null);
+
+  // Handle Station Click Focus
+  const focusOnStation = (st: Station) => {
+    setActiveStation(st);
+    targetRotY.current = - (st.lng * Math.PI) / 180 - Math.PI / 2;
+    targetRotX.current = (st.lat * Math.PI) / 180 * 0.7;
+  };
+
+  // Drag handlers for mouse rotation
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+    targetRotY.current = null;
+    targetRotX.current = null;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
+    setRotY((prev) => prev + dx * 0.006);
+    setRotX((prev) => Math.max(-1.2, Math.min(1.2, prev + dy * 0.006)));
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -86,162 +134,226 @@ export default function Stations() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let animationFrameId: number;
+    let animId: number;
 
     const render = () => {
-      rotationRef.current += 0.005;
+      // Smooth camera interpolation towards target station
+      if (targetRotY.current !== null && targetRotX.current !== null) {
+        setRotY((prev) => prev + (targetRotY.current! - prev) * 0.08);
+        setRotX((prev) => prev + (targetRotX.current! - prev) * 0.08);
+      } else if (!isDragging) {
+        setRotY((prev) => prev + 0.003); // gentle auto spin
+      }
+
       const width = canvas.width;
       const height = canvas.height;
       const radius = Math.min(width, height) * 0.38;
-      const centerX = width / 2;
-      const centerY = height / 2;
+      const cx = width / 2;
+      const cy = height / 2;
 
       ctx.clearRect(0, 0, width, height);
 
-      // Outer Atmosphere Glow
-      const glowGrad = ctx.createRadialGradient(centerX, centerY, radius * 0.8, centerX, centerY, radius * 1.25);
-      glowGrad.addColorStop(0, 'rgba(6, 182, 212, 0.2)');
-      glowGrad.addColorStop(1, 'rgba(7, 11, 25, 0)');
-      ctx.fillStyle = glowGrad;
+      // Deep Atmospheric Outer Glow
+      const atmos = ctx.createRadialGradient(cx, cy, radius * 0.85, cx, cy, radius * 1.35);
+      atmos.addColorStop(0, 'rgba(6, 182, 212, 0.3)');
+      atmos.addColorStop(0.5, 'rgba(14, 165, 233, 0.1)');
+      atmos.addColorStop(1, 'rgba(5, 11, 24, 0)');
+      ctx.fillStyle = atmos;
       ctx.beginPath();
-      ctx.arc(centerX, centerY, radius * 1.25, 0, Math.PI * 2);
+      ctx.arc(cx, cy, radius * 1.35, 0, Math.PI * 2);
       ctx.fill();
 
-      // Earth Sphere Background
-      const sphereGrad = ctx.createRadialGradient(centerX - radius * 0.3, centerY - radius * 0.3, radius * 0.1, centerX, centerY, radius);
-      sphereGrad.addColorStop(0, '#1e293b');
-      sphereGrad.addColorStop(0.7, '#0f172a');
-      sphereGrad.addColorStop(1, '#020617');
-      ctx.fillStyle = sphereGrad;
+      // Earth Ocean Sphere Base
+      const ocean = ctx.createRadialGradient(cx - radius * 0.35, cy - radius * 0.35, radius * 0.05, cx, cy, radius);
+      ocean.addColorStop(0, '#164e63');
+      ocean.addColorStop(0.5, '#0e2338');
+      ocean.addColorStop(1, '#030816');
+      ctx.fillStyle = ocean;
       ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(6, 182, 212, 0.4)';
-      ctx.lineWidth = 2;
+
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+      ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // Latitude and Longitude Grid Lines
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
-      ctx.lineWidth = 1;
+      // Coordinate Transform 3D helper
+      const project = (lat: number, lng: number): { x: number; y: number; visible: boolean } => {
+        const phi = (lat * Math.PI) / 180;
+        const theta = (lng * Math.PI) / 180 + rotY;
 
-      for (let lat = -60; lat <= 60; lat += 30) {
-        const y = centerY + Math.sin((lat * Math.PI) / 180) * radius;
-        const rLat = Math.cos((lat * Math.PI) / 180) * radius;
+        const cosLat = Math.cos(phi);
+        const sinLat = Math.sin(phi);
+        const cosLng = Math.cos(theta);
+        const sinLng = Math.sin(theta);
+
+        // Apply pitch tilt (rotX)
+        const cosTilt = Math.cos(rotX);
+        const sinTilt = Math.sin(rotX);
+
+        const x3 = cosLat * sinLng;
+        const y3 = sinLat * cosTilt - cosLat * cosLng * sinTilt;
+        const z3 = sinLat * sinTilt + cosLat * cosLng * cosTilt;
+
+        return {
+          x: cx + radius * x3,
+          y: cy - radius * y3,
+          visible: z3 > 0.05
+        };
+      };
+
+      // Draw Continents & Countries
+      CONTINENT_PATHS.forEach((path) => {
         ctx.beginPath();
-        ctx.ellipse(centerX, y, rLat, rLat * 0.3, 0, 0, Math.PI * 2);
-        ctx.stroke();
-      }
+        let first = true;
+        let anyVisible = false;
 
-      for (let i = 0; i < 6; i++) {
-        const angle = rotationRef.current + (i * Math.PI) / 3;
-        ctx.beginPath();
-        ctx.ellipse(centerX, centerY, radius * Math.abs(Math.cos(angle)), radius, 0, 0, Math.PI * 2);
-        ctx.stroke();
-      }
+        path.forEach(([lat, lng]) => {
+          const pt = project(lat, lng);
+          if (pt.visible) anyVisible = true;
+          if (first) {
+            ctx.moveTo(pt.x, pt.y);
+            first = false;
+          } else {
+            ctx.lineTo(pt.x, pt.y);
+          }
+        });
+        ctx.closePath();
 
-      // Plot Stations on 3D Sphere Projection
-      stations.forEach((st) => {
-        const phi = (90 - st.lat) * (Math.PI / 180);
-        const theta = (st.lng * Math.PI) / 180 + rotationRef.current;
-
-        const x = centerX + radius * Math.sin(phi) * Math.cos(theta);
-        const y = centerY - radius * Math.cos(phi);
-        const isVisible = Math.sin(phi) * Math.sin(theta) >= -0.2;
-
-        if (isVisible) {
-          const isSelected = activeStation.id === st.id;
-          
-          // Marker Pulse
-          ctx.beginPath();
-          ctx.arc(x, y, isSelected ? 8 : 4, 0, Math.PI * 2);
-          ctx.fillStyle = isSelected ? '#38bdf8' : '#06b6d4';
-          ctx.shadowColor = '#38bdf8';
-          ctx.shadowBlur = isSelected ? 15 : 6;
+        if (anyVisible) {
+          ctx.fillStyle = 'rgba(13, 148, 136, 0.28)';
           ctx.fill();
-          ctx.shadowBlur = 0;
-
-          // Label
-          ctx.fillStyle = isSelected ? '#ffffff' : '#94a3b8';
-          ctx.font = isSelected ? 'bold 12px Inter, sans-serif' : '10px Inter, sans-serif';
-          ctx.fillText(st.name.split(' ')[0], x + 10, y + 4);
+          ctx.strokeStyle = 'rgba(45, 212, 191, 0.6)';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
         }
       });
 
-      animationFrameId = requestAnimationFrame(render);
+      // Draw Latitude / Longitude Graticule Rings
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
+      ctx.lineWidth = 0.8;
+      for (let lat = -60; lat <= 60; lat += 30) {
+        ctx.beginPath();
+        for (let lng = -180; lng <= 180; lng += 15) {
+          const pt = project(lat, lng);
+          if (lng === -180) ctx.moveTo(pt.x, pt.y);
+          else ctx.lineTo(pt.x, pt.y);
+        }
+        ctx.stroke();
+      }
+
+      // Draw Station Beacons & Pulse Rings
+      stations.forEach((st) => {
+        const pt = project(st.lat, st.lng);
+        if (pt.visible) {
+          const isSelected = activeStation.id === st.id;
+
+          // Pulse ring
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, isSelected ? 12 : 6, 0, Math.PI * 2);
+          ctx.strokeStyle = isSelected ? 'rgba(56, 189, 248, 0.8)' : 'rgba(6, 182, 212, 0.4)';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Center solid point
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, isSelected ? 5 : 3, 0, Math.PI * 2);
+          ctx.fillStyle = isSelected ? '#38bdf8' : '#06b6d4';
+          ctx.shadowColor = '#38bdf8';
+          ctx.shadowBlur = isSelected ? 18 : 6;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          // Pin Label
+          ctx.fillStyle = isSelected ? '#ffffff' : '#cbd5e1';
+          ctx.font = isSelected ? 'bold 12px Inter, sans-serif' : '10px Inter, sans-serif';
+          ctx.fillText(st.name.split(' ')[0], pt.x + 9, pt.y + 4);
+        }
+      });
+
+      animId = requestAnimationFrame(render);
     };
 
     render();
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, [activeStation]);
+    return () => cancelAnimationFrame(animId);
+  }, [rotX, rotY, isDragging, activeStation]);
 
   return (
     <div className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-white">
-      <div className="text-center mb-12">
+      <div className="text-center mb-10">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-500/30 bg-cyan-950/40 text-cyan-300 text-xs font-semibold uppercase tracking-wider mb-3">
           <Radio className="w-3.5 h-3.5 text-cyan-400" />
           Global Polar Observation Grid
         </div>
         <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-          Interactive 3D Station Telemetry
+          Interactive 3D Earth Station Telemetry
         </h2>
         <p className="mt-2 text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
-          Select an Indian polar research station to track coordinates, environmental sensors, and scientific mission profiles.
+          Click on any station button or drag the globe directly to inspect live sensors, coordinates, and ongoing expeditions.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-slate-900/40 border border-slate-800 p-6 sm:p-8 rounded-2xl backdrop-blur-md shadow-2xl">
-        {/* Interactive 3D Globe Canvas (7 Cols) */}
-        <div className="lg:col-span-7 flex flex-col items-center justify-center relative">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-slate-900/60 border border-slate-800 p-6 sm:p-8 rounded-2xl backdrop-blur-md shadow-2xl">
+        {/* Interactive 3D Earth Canvas */}
+        <div 
+          className="lg:col-span-7 flex flex-col items-center justify-center relative select-none"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        >
           <canvas
             ref={canvasRef}
-            width={480}
-            height={480}
-            className="w-full max-w-[420px] aspect-square cursor-grab active:cursor-grabbing"
+            width={520}
+            height={520}
+            className="w-full max-w-[440px] aspect-square cursor-grab active:cursor-grabbing rounded-full"
           />
-          <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
-            <Compass className="w-3.5 h-3.5 text-cyan-400" />
-            Live rotating projection (Antarctic & Arctic observation networks)
-          </p>
+          <div className="flex items-center gap-4 text-xs text-slate-400 mt-3">
+            <span className="flex items-center gap-1.5">
+              <Compass className="w-3.5 h-3.5 text-cyan-400" /> Drag to rotate globe
+            </span>
+            <button 
+              onClick={() => focusOnStation(activeStation)} 
+              className="flex items-center gap-1 text-cyan-300 hover:text-cyan-200"
+            >
+              <RotateCcw className="w-3 h-3" /> Re-center
+            </button>
+          </div>
         </div>
 
-        {/* Station Detail Drawer & Selector (5 Cols) */}
+        {/* Station Detail Drawer & Buttons */}
         <div className="lg:col-span-5 space-y-6">
-          {/* Station Selection Buttons */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2.5">
             {stations.map((st) => (
               <button
                 key={st.id}
-                onClick={() => setActiveStation(st)}
-                className={`px-3.5 py-2.5 rounded-lg text-xs font-semibold text-left transition border ${
+                onClick={() => focusOnStation(st)}
+                className={`px-4 py-3 rounded-xl text-xs font-semibold text-left transition border ${
                   activeStation.id === st.id
-                    ? 'bg-cyan-950/80 border-cyan-500 text-cyan-200 shadow-md shadow-cyan-950'
+                    ? 'bg-cyan-950/90 border-cyan-400 text-cyan-200 shadow-lg shadow-cyan-950 ring-1 ring-cyan-400'
                     : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800'
                 }`}
               >
-                <span className="block">{st.name}</span>
+                <span className="block font-medium">{st.name}</span>
                 <span className="text-[10px] text-slate-400 font-normal">{st.realm.split(' ')[0]}</span>
               </button>
             ))}
           </div>
 
-          {/* Active Station Card */}
-          <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-700/80 space-y-4">
-            <div className="relative h-36 rounded-lg overflow-hidden border border-slate-700/60">
+          <div className="p-5 rounded-xl bg-slate-950/80 border border-slate-700/80 space-y-4 shadow-xl">
+            <div className="relative h-40 rounded-lg overflow-hidden border border-slate-700/60">
               <img
                 src={activeStation.image}
                 alt={activeStation.name}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
-              <div className="absolute bottom-2 left-3 right-3 flex justify-between items-end">
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+              <div className="absolute bottom-2.5 left-3 right-3 flex justify-between items-end">
                 <div>
                   <h4 className="text-base font-bold text-white">{activeStation.name}</h4>
-                  <p className="text-xs text-slate-300">{activeStation.realm}</p>
+                  <p className="text-xs text-cyan-300">{activeStation.realm}</p>
                 </div>
-                <span className="text-[10px] bg-slate-900/80 px-2 py-0.5 rounded border border-slate-700 text-cyan-300">
+                <span className="text-[10px] bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700 text-slate-300">
                   Est. {activeStation.established}
                 </span>
               </div>
@@ -251,7 +363,6 @@ export default function Stations() {
               {activeStation.desc}
             </p>
 
-            {/* Quick Metrics */}
             <div className="grid grid-cols-2 gap-3 pt-2 text-xs border-t border-slate-800">
               <div>
                 <span className="text-slate-400 block text-[11px]">Coordinates:</span>
