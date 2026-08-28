@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Thermometer, Wind, Compass, Radio, ExternalLink, RotateCcw } from 'lucide-react';
+import { Radio, Compass, RotateCcw } from 'lucide-react';
 
 interface Station {
   id: string;
@@ -75,11 +75,11 @@ const stations: Station[] = [
   }
 ];
 
-// Simplified Continent Polygonal Outlines [Lat, Lng]
-const CONTINENT_PATHS: [number, number][][] = [
-  // Antarctica Outline
+// Simplified Continent Outlines [Lat, Lng]
+const CONTINENTS: [number, number][][] = [
+  // Antarctica
   [[-70, 0], [-68, 30], [-66, 60], [-68, 90], [-67, 120], [-70, 150], [-72, 180], [-74, -150], [-72, -120], [-65, -90], [-64, -60], [-70, -30], [-70, 0]],
-  // Africa Outline
+  // Africa
   [[35, -5], [37, 10], [31, 32], [12, 43], [-10, 40], [-34, 18], [-34, 26], [-15, 12], [5, 1], [15, -17], [30, -10], [35, -5]],
   // Eurasia (Europe & Asia + India)
   [[36, -9], [43, 5], [54, 8], [60, 28], [70, 40], [72, 120], [60, 160], [38, 140], [22, 114], [10, 105], [8, 77], [22, 69], [25, 60], [35, 45], [40, 26], [36, -9]],
@@ -93,40 +93,41 @@ const CONTINENT_PATHS: [number, number][][] = [
 
 export default function Stations() {
   const [activeStation, setActiveStation] = useState<Station>(stations[0]);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [rotX, setRotX] = useState(0.35); // tilt
-  const [rotY, setRotY] = useState(0);    // spin
-
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const targetRotY = useRef<number | null>(null);
-  const targetRotX = useRef<number | null>(null);
 
-  // Handle Station Click Focus
+  // Rotation state refs to prevent re-render thrashing
+  const rotY = useRef<number>(0);
+  const rotX = useRef<number>(0.2);
+  const isDragging = useRef<boolean>(false);
+  const lastMousePos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const targetRotation = useRef<{ y: number; x: number } | null>(null);
+
   const focusOnStation = (st: Station) => {
     setActiveStation(st);
-    targetRotY.current = - (st.lng * Math.PI) / 180 - Math.PI / 2;
-    targetRotX.current = (st.lat * Math.PI) / 180 * 0.7;
+    targetRotation.current = {
+      y: -(st.lng * Math.PI) / 180 - Math.PI / 2,
+      x: (st.lat * Math.PI) / 180 * 0.6
+    };
   };
 
-  // Drag handlers for mouse rotation
   const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
-    targetRotY.current = null;
-    targetRotX.current = null;
+    isDragging.current = true;
+    lastMousePos.current = { x: e.clientX, y: e.clientY };
+    targetRotation.current = null;
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    const dx = e.clientX - dragStart.x;
-    const dy = e.clientY - dragStart.y;
-    setRotY((prev) => prev + dx * 0.006);
-    setRotX((prev) => Math.max(-1.2, Math.min(1.2, prev + dy * 0.006)));
-    setDragStart({ x: e.clientX, y: e.clientY });
+    if (!isDragging.current) return;
+    const dx = e.clientX - lastMousePos.current.x;
+    const dy = e.clientY - lastMousePos.current.y;
+    rotY.current += dx * 0.005;
+    rotX.current = Math.max(-1.1, Math.min(1.1, rotX.current + dy * 0.005));
+    lastMousePos.current = { x: e.clientX, y: e.clientY };
   };
 
-  const handleMouseUp = () => setIsDragging(false);
+  const handleMouseUp = () => {
+    isDragging.current = false;
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -137,80 +138,77 @@ export default function Stations() {
     let animId: number;
 
     const render = () => {
-      // Smooth camera interpolation towards target station
-      if (targetRotY.current !== null && targetRotX.current !== null) {
-        setRotY((prev) => prev + (targetRotY.current! - prev) * 0.08);
-        setRotX((prev) => prev + (targetRotX.current! - prev) * 0.08);
-      } else if (!isDragging) {
-        setRotY((prev) => prev + 0.003); // gentle auto spin
+      // Smooth interpolation to target station or slow constant spin
+      if (targetRotation.current) {
+        rotY.current += (targetRotation.current.y - rotY.current) * 0.06;
+        rotX.current += (targetRotation.current.x - rotX.current) * 0.06;
+      } else if (!isDragging.current) {
+        rotY.current += 0.002; // Very slow, stable auto-rotation
       }
 
-      const width = canvas.width;
-      const height = canvas.height;
-      const radius = Math.min(width, height) * 0.38;
-      const cx = width / 2;
-      const cy = height / 2;
+      const w = canvas.width;
+      const h = canvas.height;
+      const r = Math.min(w, h) * 0.38;
+      const cx = w / 2;
+      const cy = h / 2;
 
-      ctx.clearRect(0, 0, width, height);
+      ctx.clearRect(0, 0, w, h);
 
-      // Deep Atmospheric Outer Glow
-      const atmos = ctx.createRadialGradient(cx, cy, radius * 0.85, cx, cy, radius * 1.35);
-      atmos.addColorStop(0, 'rgba(6, 182, 212, 0.3)');
-      atmos.addColorStop(0.5, 'rgba(14, 165, 233, 0.1)');
-      atmos.addColorStop(1, 'rgba(5, 11, 24, 0)');
-      ctx.fillStyle = atmos;
+      // Outer Glow
+      const glow = ctx.createRadialGradient(cx, cy, r * 0.9, cx, cy, r * 1.3);
+      glow.addColorStop(0, 'rgba(6, 182, 212, 0.25)');
+      glow.addColorStop(1, 'rgba(3, 7, 18, 0)');
+      ctx.fillStyle = glow;
       ctx.beginPath();
-      ctx.arc(cx, cy, radius * 1.35, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r * 1.3, 0, Math.PI * 2);
       ctx.fill();
 
-      // Earth Ocean Sphere Base
-      const ocean = ctx.createRadialGradient(cx - radius * 0.35, cy - radius * 0.35, radius * 0.05, cx, cy, radius);
-      ocean.addColorStop(0, '#164e63');
-      ocean.addColorStop(0.5, '#0e2338');
-      ocean.addColorStop(1, '#030816');
-      ctx.fillStyle = ocean;
+      // Ocean Sphere
+      const oceanGrad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.05, cx, cy, r);
+      oceanGrad.addColorStop(0, '#0f314d');
+      oceanGrad.addColorStop(0.6, '#081a2e');
+      oceanGrad.addColorStop(1, '#020713');
+      ctx.fillStyle = oceanGrad;
       ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // Coordinate Transform 3D helper
+      // 3D Projection Helper
       const project = (lat: number, lng: number): { x: number; y: number; visible: boolean } => {
         const phi = (lat * Math.PI) / 180;
-        const theta = (lng * Math.PI) / 180 + rotY;
+        const theta = (lng * Math.PI) / 180 + rotY.current;
 
         const cosLat = Math.cos(phi);
         const sinLat = Math.sin(phi);
         const cosLng = Math.cos(theta);
         const sinLng = Math.sin(theta);
 
-        // Apply pitch tilt (rotX)
-        const cosTilt = Math.cos(rotX);
-        const sinTilt = Math.sin(rotX);
+        const cosTilt = Math.cos(rotX.current);
+        const sinTilt = Math.sin(rotX.current);
 
         const x3 = cosLat * sinLng;
         const y3 = sinLat * cosTilt - cosLat * cosLng * sinTilt;
         const z3 = sinLat * sinTilt + cosLat * cosLng * cosTilt;
 
         return {
-          x: cx + radius * x3,
-          y: cy - radius * y3,
+          x: cx + r * x3,
+          y: cy - r * y3,
           visible: z3 > 0.05
         };
       };
 
-      // Draw Continents & Countries
-      CONTINENT_PATHS.forEach((path) => {
+      // Draw Continents
+      CONTINENTS.forEach((polygon) => {
         ctx.beginPath();
         let first = true;
-        let anyVisible = false;
-
-        path.forEach(([lat, lng]) => {
+        let anyVis = false;
+        polygon.forEach(([lat, lng]) => {
           const pt = project(lat, lng);
-          if (pt.visible) anyVisible = true;
+          if (pt.visible) anyVis = true;
           if (first) {
             ctx.moveTo(pt.x, pt.y);
             first = false;
@@ -220,21 +218,21 @@ export default function Stations() {
         });
         ctx.closePath();
 
-        if (anyVisible) {
-          ctx.fillStyle = 'rgba(13, 148, 136, 0.28)';
+        if (anyVis) {
+          ctx.fillStyle = 'rgba(14, 165, 233, 0.22)';
           ctx.fill();
-          ctx.strokeStyle = 'rgba(45, 212, 191, 0.6)';
-          ctx.lineWidth = 1.2;
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+          ctx.lineWidth = 1;
           ctx.stroke();
         }
       });
 
-      // Draw Latitude / Longitude Graticule Rings
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
-      ctx.lineWidth = 0.8;
+      // Graticule Lines (Lat/Long)
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
+      ctx.lineWidth = 0.7;
       for (let lat = -60; lat <= 60; lat += 30) {
         ctx.beginPath();
-        for (let lng = -180; lng <= 180; lng += 15) {
+        for (let lng = -180; lng <= 180; lng += 20) {
           const pt = project(lat, lng);
           if (lng === -180) ctx.moveTo(pt.x, pt.y);
           else ctx.lineTo(pt.x, pt.y);
@@ -242,7 +240,7 @@ export default function Stations() {
         ctx.stroke();
       }
 
-      // Draw Station Beacons & Pulse Rings
+      // Draw Station Pins
       stations.forEach((st) => {
         const pt = project(st.lat, st.lng);
         if (pt.visible) {
@@ -250,24 +248,24 @@ export default function Stations() {
 
           // Pulse ring
           ctx.beginPath();
-          ctx.arc(pt.x, pt.y, isSelected ? 12 : 6, 0, Math.PI * 2);
-          ctx.strokeStyle = isSelected ? 'rgba(56, 189, 248, 0.8)' : 'rgba(6, 182, 212, 0.4)';
+          ctx.arc(pt.x, pt.y, isSelected ? 9 : 5, 0, Math.PI * 2);
+          ctx.strokeStyle = isSelected ? '#38bdf8' : 'rgba(6, 182, 212, 0.6)';
           ctx.lineWidth = 1.5;
           ctx.stroke();
 
-          // Center solid point
+          // Center Beacon
           ctx.beginPath();
-          ctx.arc(pt.x, pt.y, isSelected ? 5 : 3, 0, Math.PI * 2);
-          ctx.fillStyle = isSelected ? '#38bdf8' : '#06b6d4';
-          ctx.shadowColor = '#38bdf8';
-          ctx.shadowBlur = isSelected ? 18 : 6;
+          ctx.arc(pt.x, pt.y, isSelected ? 4 : 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = isSelected ? '#ffffff' : '#38bdf8';
+          ctx.shadowColor = '#06b6d4';
+          ctx.shadowBlur = isSelected ? 12 : 4;
           ctx.fill();
           ctx.shadowBlur = 0;
 
           // Pin Label
-          ctx.fillStyle = isSelected ? '#ffffff' : '#cbd5e1';
-          ctx.font = isSelected ? 'bold 12px Inter, sans-serif' : '10px Inter, sans-serif';
-          ctx.fillText(st.name.split(' ')[0], pt.x + 9, pt.y + 4);
+          ctx.fillStyle = isSelected ? '#ffffff' : '#94a3b8';
+          ctx.font = isSelected ? 'bold 11px Inter, sans-serif' : '9px Inter, sans-serif';
+          ctx.fillText(st.name.replace(' Station', '').replace(' Observatory', ''), pt.x + 8, pt.y + 3);
         }
       });
 
@@ -276,7 +274,7 @@ export default function Stations() {
 
     render();
     return () => cancelAnimationFrame(animId);
-  }, [rotX, rotY, isDragging, activeStation]);
+  }, [activeStation]);
 
   return (
     <div className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-white">
@@ -289,12 +287,12 @@ export default function Stations() {
           Interactive 3D Earth Station Telemetry
         </h2>
         <p className="mt-2 text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
-          Click on any station button or drag the globe directly to inspect live sensors, coordinates, and ongoing expeditions.
+          Click on any station button or drag the globe to inspect real-time polar telemetry, coordinates, and ongoing expeditions.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-slate-900/60 border border-slate-800 p-6 sm:p-8 rounded-2xl backdrop-blur-md shadow-2xl">
-        {/* Interactive 3D Earth Canvas */}
+        {/* Globe Canvas Container */}
         <div 
           className="lg:col-span-7 flex flex-col items-center justify-center relative select-none"
           onMouseDown={handleMouseDown}
@@ -304,13 +302,13 @@ export default function Stations() {
         >
           <canvas
             ref={canvasRef}
-            width={520}
-            height={520}
-            className="w-full max-w-[440px] aspect-square cursor-grab active:cursor-grabbing rounded-full"
+            width={480}
+            height={480}
+            className="w-full max-w-[420px] aspect-square cursor-grab active:cursor-grabbing rounded-full"
           />
           <div className="flex items-center gap-4 text-xs text-slate-400 mt-3">
             <span className="flex items-center gap-1.5">
-              <Compass className="w-3.5 h-3.5 text-cyan-400" /> Drag to rotate globe
+              <Compass className="w-3.5 h-3.5 text-cyan-400" /> Drag slowly to rotate
             </span>
             <button 
               onClick={() => focusOnStation(activeStation)} 
@@ -321,7 +319,7 @@ export default function Stations() {
           </div>
         </div>
 
-        {/* Station Detail Drawer & Buttons */}
+        {/* Station Buttons & Detail Drawer */}
         <div className="lg:col-span-5 space-y-6">
           <div className="grid grid-cols-2 gap-2.5">
             {stations.map((st) => (
