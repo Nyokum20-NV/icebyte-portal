@@ -1,88 +1,66 @@
-import { useState, useEffect } from 'react';
-import Navbar from '@/components/Navbar';
-import Hero from '@/components/Hero';
-import Research from '@/components/Research';
-import Stations from '@/components/Stations';
-import Media from '@/components/Media';
-import StudentOutreach from '@/components/StudentOutreach';
-import { Snowflake } from 'lucide-react';
+import React, { useState } from 'react';
+import Navbar from './components/Navbar';
+import Hero from './components/Hero';
+import Research from './components/Research';
+import Stations from './components/Stations';
+import Media from './components/Media';
+import StudentOutreach from './components/StudentOutreach';
 
-type View = 'main' | 'media' | 'outreach';
+export type TabType = 'command' | 'research' | 'stations' | 'media' | 'outreach';
 
-function App() {
-  const [view, setView] = useState<View>('main');
+export default function App() {
+  const [activeTab, setActiveTab] = useState<TabType>('command');
 
-  const handleNavigate = (target: string, targetView: 'main' | 'media' | 'outreach') => {
-    if (targetView !== view) {
-      setView(targetView);
-      // Wait for view to render before scrolling
-      setTimeout(() => {
-        if (targetView === 'main') {
-          const el = document.getElementById(target);
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      }, 50);
-    } else {
-      if (targetView === 'main') {
-        const el = document.getElementById(target);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    }
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Scroll to top when switching to a non-main view
-  useEffect(() => {
-    if (view !== 'main') {
-      window.scrollTo({ top: 0 });
-    }
-  }, [view]);
-
   return (
-    <div className="min-h-screen bg-polar-bg text-slate-200">
-      <Navbar onNavigate={handleNavigate} activeView={view} />
-      <main>
-        {view === 'main' && (
-          <>
-            <Hero />
-            <Research />
-            <Stations />
-          </>
+    <div className="min-h-screen bg-[#030712] text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
+      {/* Universal Fixed Navbar */}
+      <Navbar activeTab={activeTab} onSelectTab={handleTabChange} />
+
+      {/* Main View Router */}
+      <main className="flex-grow pt-16">
+        {activeTab === 'command' && (
+          <div className="space-y-12">
+            <Hero onExploreResearch={() => handleTabChange('research')} onExploreStations={() => handleTabChange('stations')} />
+            <div id="quick-telemetry" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <Stations />
+            </div>
+          </div>
         )}
-        {view === 'media' && <Media />}
-        {view === 'outreach' && <StudentOutreach />}
+
+        {activeTab === 'research' && (
+          <div className="animate-fadeIn">
+            <Research />
+          </div>
+        )}
+
+        {activeTab === 'stations' && (
+          <div className="animate-fadeIn py-6">
+            <Stations />
+          </div>
+        )}
+
+        {activeTab === 'media' && (
+          <div className="animate-fadeIn">
+            <Media />
+          </div>
+        )}
+
+        {activeTab === 'outreach' && (
+          <div className="animate-fadeIn">
+            <StudentOutreach />
+          </div>
+        )}
       </main>
 
-      {/* Footer */}
-      <footer className="relative border-t border-polar-border bg-polar-surface/50">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <button
-              onClick={() => handleNavigate('hero', 'main')}
-              className="flex items-center gap-3"
-            >
-              <div className="w-9 h-9 rounded-lg bg-frost-cyan/10 border border-frost-cyan/30 flex items-center justify-center">
-                <Snowflake className="w-5 h-5 text-frost-cyan" />
-              </div>
-              <div className="text-left">
-                <span className="font-bold text-white tracking-wider">ICEBYTE</span>
-                <span className="text-xs font-mono text-frost-cyan/70 ml-2">MoES | NCPOR</span>
-              </div>
-            </button>
-            <p className="text-xs text-slate-500 text-center">
-              Polar Science Knowledge & Outreach Portal · Built for the Ministry of Earth Sciences
-            </p>
-            <p className="text-xs font-mono text-slate-600">
-              © 2026 ICEBYTE · All telemetry simulated
-            </p>
-          </div>
-        </div>
+      {/* Unified Footer */}
+      <footer className="border-t border-slate-800/80 bg-slate-950/80 py-8 text-center text-xs text-slate-400">
+        <p>© 2026 ICEBYTE • Ministry of Earth Sciences (MoES) • National Centre for Polar and Ocean Research (NCPOR)</p>
       </footer>
     </div>
   );
 }
-
-export default App;
