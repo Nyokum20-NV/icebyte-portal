@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Filter, Download, Eye, FileText, CheckCircle2, X } from 'lucide-react';
 
-interface Dataset {
+export interface Dataset {
   id: string;
   title: string;
   station: string;
@@ -21,7 +21,7 @@ const datasets: Dataset[] = [
     discipline: 'Atmospheric Physics',
     year: 2023,
     recordsCount: '1.4M data points',
-    abstract: 'Analysis of 15 years of continuous surface ozone measurements revealing a slow recovery tied to Montreal Protocol enforcement and changing Brewer-Dobson circulation dynamics.'
+    abstract: 'Continuous surface ozone measurements analyzing polar vortex chemistry and long-term recovery patterns following Montreal Protocol enforcement.'
   },
   {
     id: '2',
@@ -31,7 +31,7 @@ const datasets: Dataset[] = [
     discipline: 'Glaciology & Ice Cores',
     year: 2021,
     recordsCount: '840 core slices',
-    abstract: 'High-resolution oxygen isotope analysis of Arctic ice cores providing a two-millennium temperature record with links to North Atlantic Oscillation variability.'
+    abstract: 'High-resolution oxygen isotope stratigraphy from Arctic fjord cores providing multi-centennial paleotemperature proxies.'
   },
   {
     id: '3',
@@ -41,7 +41,7 @@ const datasets: Dataset[] = [
     discipline: 'Oceanography',
     year: 2024,
     recordsCount: '320 water samples',
-    abstract: 'First systematic survey of microplastic concentrations in the Southern Ocean around Antarctica, revealing higher-than-expected synthetic fibers from atmospheric transport.'
+    abstract: 'FTIR spectroscopic quantification of synthetic polymer fibers and nurdles transported via circum-Antarctic currents.'
   },
   {
     id: '4',
@@ -51,7 +51,7 @@ const datasets: Dataset[] = [
     discipline: 'Space Weather & Magnetism',
     year: 2022,
     recordsCount: '98,000 telemetry hrs',
-    abstract: 'Magnetometer and riometer observations from Svalbard characterizing ionospheric response to coronal mass ejections during Solar Cycle 25.'
+    abstract: 'High-latitude fluxgate magnetometer and riometer observations tracking ionospheric current disturbances during major solar flares.'
   },
   {
     id: '5',
@@ -61,7 +61,7 @@ const datasets: Dataset[] = [
     discipline: 'Glaciology & Ice Cores',
     year: 2020,
     recordsCount: '45 glacier profiles',
-    abstract: 'Comprehensive multi-sensor study documenting mass balance changes across major Himalayan glaciers, with implications for regional water security.'
+    abstract: 'Geodetic mass-balance estimations across the Chandra-Bhaga basin documenting snout retreat and moraine-dammed lake expansions.'
   },
   {
     id: '6',
@@ -71,7 +71,67 @@ const datasets: Dataset[] = [
     discipline: 'Extremophile Biology',
     year: 2025,
     recordsCount: '180 genomic sequences',
-    abstract: 'Metagenomic profiling of microbial mats surviving in permanently ice-covered Antarctic lakes, offering clues for astrobiology and ancient life limits.'
+    abstract: 'Metagenomic profiling of cold-tolerant psychrophilic bacteria extracted from the perennial ice cover of Lake Priyadarshini.'
+  },
+  {
+    id: '7',
+    title: 'Aerosol Optical Depth and Black Carbon Deposition over Ny-Ålesund',
+    station: 'Himadri',
+    realm: 'Arctic',
+    discipline: 'Atmospheric Physics',
+    year: 2023,
+    recordsCount: '410,000 spectral scans',
+    abstract: 'Sun-photometer and aethalometer monitoring characterizing long-range transport of Eurasian anthropogenic aerosols into the high Arctic.'
+  },
+  {
+    id: '8',
+    title: 'Subsurface Moored Current Dynamics in Kongsfjorden Fjord',
+    station: 'IndARC',
+    realm: 'Arctic',
+    discipline: 'Oceanography',
+    year: 2024,
+    recordsCount: '52 ADCP deployments',
+    abstract: 'Year-round acoustic Doppler profiling capturing Atlantic Water advection pulses and their impact on Arctic marine stratification.'
+  },
+  {
+    id: '9',
+    title: 'Permafrost Active-Layer Thermal Profiling in Schirmacher Oasis',
+    station: 'Maitri',
+    realm: 'Antarctica',
+    discipline: 'Glaciology & Ice Cores',
+    year: 2022,
+    recordsCount: '24 borehole logs',
+    abstract: 'Subsurface thermistor array logs recording freeze-thaw cycles and active-layer depth changes in Queen Maud Land bedrock.'
+  },
+  {
+    id: '10',
+    title: 'Benthic Fauna Diversity Along the Princess Elizabeth Land Coast',
+    station: 'Bharati',
+    realm: 'Southern Ocean',
+    discipline: 'Extremophile Biology',
+    year: 2023,
+    recordsCount: '95 grab samples',
+    abstract: 'Taxonomic and biomass analysis of macrobenthos collected via epibenthic sleds to gauge biodiversity responses to iceberg scouring.'
+  },
+  {
+    id: '11',
+    title: 'VLF Radio Wave Propagation Anomaly Detection in Polar Cap Absorption Events',
+    station: 'Maitri',
+    realm: 'Antarctica',
+    discipline: 'Space Weather & Magnetism',
+    year: 2021,
+    recordsCount: '1,200 phase logs',
+    abstract: 'Phase and amplitude recordings of sub-ionospheric VLF signals diagnosing energetic proton precipitation events over D-region heights.'
+  },
+  {
+    id: '12',
+    title: 'Chhota Shigri Glacier Mass Balance & Hydrological Runoff Modeling',
+    station: 'Himadri',
+    realm: 'Himalayas',
+    discipline: 'Glaciology & Ice Cores',
+    year: 2024,
+    recordsCount: '310 discharge series',
+    abstract: 'Stake-based ablation networks combined with automated weather station data evaluating glacial meltwater contribution to the Indus basin.'
   }
 ];
 
