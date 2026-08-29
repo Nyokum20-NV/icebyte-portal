@@ -4,15 +4,14 @@ import { ShieldAlert, Compass, Activity, Thermometer, Wind, Gauge, Sun } from 'l
 export default function Hero() {
   return (
     <div className="relative min-h-[92vh] bg-[#030712] text-white flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 overflow-hidden">
-      {/* Submerged Underwater Deep-Iceberg Background */}
-      <div 
-        {/* Submerged Split Underwater Iceberg Background */}
+      {/* Submerged Split Underwater Iceberg Background */}
       <div 
         className="absolute inset-0 bg-cover bg-center z-0 opacity-60 scale-100"
         style={{
-          backgroundImage: `linear-gradient(to bottom, rgba(3, 7, 18, 0.4) 0%, rgba(3, 7, 18, 0.7) 50%, rgba(3, 7, 18, 0.98) 100%), url('https://images.stockcake.com/public/6/0/a/60a72464-9ce5-412e-9d22-10815197ba75_large/submerged-iceberg-view-stockcake.jpg')`
+          backgroundImage: `linear-gradient(to bottom, rgba(3, 7, 18, 0.45) 0%, rgba(3, 7, 18, 0.75) 50%, rgba(3, 7, 18, 0.98) 100%), url('https://images.stockcake.com/public/6/0/a/60a72464-9ce5-412e-9d22-10815197ba75_large/submerged-iceberg-view-stockcake.jpg')`
         }}
       />
+
       {/* Atmospheric Polar Ray Glow */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.15)_0,transparent_70%)] pointer-events-none z-0" />
 
