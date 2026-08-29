@@ -1,439 +1,269 @@
-import { useState, useMemo } from 'react';
-import {
-  Filter,
-  FileText,
-  Download,
-  Database,
-  Quote,
-  Eye,
-  X,
-  ChevronDown,
-  Calendar,
-  Tag,
-} from 'lucide-react';
-import {
-  researchPapers,
-  filterChips,
-  type Realm,
-  type StationName,
-  type Discipline,
-  type ResearchPaper,
-} from '@/data/mockData';
+import React, { useState, useEffect } from 'react';
+import { Filter, Download, Eye, FileText, CheckCircle2, X } from 'lucide-react';
 
-const realms: ('All' | Realm)[] = ['All', 'Antarctica', 'Arctic', 'Southern Ocean', 'Himalayas'];
-const stationNames: ('All' | StationName)[] = ['All', 'Maitri', 'Bharati', 'Himadri', 'IndARC'];
-const disciplines: ('All' | Discipline)[] = [
-  'All',
-  'Glaciology & Ice Cores',
-  'Atmospheric Physics',
-  'Oceanography',
-  'Space Weather & Magnetism',
-  'Extremophile Biology',
+interface Dataset {
+  id: string;
+  title: string;
+  station: string;
+  realm: string;
+  discipline: string;
+  year: number;
+  abstract: string;
+  recordsCount: string;
+}
+
+const datasets: Dataset[] = [
+  {
+    id: '1',
+    title: 'Multidecadal Variations of Surface Ozone & Trace Gases at Bharati Station',
+    station: 'Bharati',
+    realm: 'Antarctica',
+    discipline: 'Atmospheric Physics',
+    year: 2023,
+    recordsCount: '1.4M data points',
+    abstract: 'Analysis of 15 years of continuous surface ozone measurements revealing a slow recovery tied to Montreal Protocol enforcement and changing Brewer-Dobson circulation dynamics.'
+  },
+  {
+    id: '2',
+    title: 'Ice Core δ18O Records from IndARC: 2,000-Year Temperature Reconstruction',
+    station: 'IndARC',
+    realm: 'Arctic',
+    discipline: 'Glaciology & Ice Cores',
+    year: 2021,
+    recordsCount: '840 core slices',
+    abstract: 'High-resolution oxygen isotope analysis of Arctic ice cores providing a two-millennium temperature record with links to North Atlantic Oscillation variability.'
+  },
+  {
+    id: '3',
+    title: 'Microplastic Abundance in Southern Ocean Surface Waters Near Maitri',
+    station: 'Maitri',
+    realm: 'Southern Ocean',
+    discipline: 'Oceanography',
+    year: 2024,
+    recordsCount: '320 water samples',
+    abstract: 'First systematic survey of microplastic concentrations in the Southern Ocean around Antarctica, revealing higher-than-expected synthetic fibers from atmospheric transport.'
+  },
+  {
+    id: '4',
+    title: 'Geomagnetic Storm Signatures at Himadri: Effects on Polar Ionosphere',
+    station: 'Himadri',
+    realm: 'Arctic',
+    discipline: 'Space Weather & Magnetism',
+    year: 2022,
+    recordsCount: '98,000 telemetry hrs',
+    abstract: 'Magnetometer and riometer observations from Svalbard characterizing ionospheric response to coronal mass ejections during Solar Cycle 25.'
+  },
+  {
+    id: '5',
+    title: 'Himalayan Glacial Retreat Patterns: 40-Year Satellite & Field Survey',
+    station: 'IndARC',
+    realm: 'Himalayas',
+    discipline: 'Glaciology & Ice Cores',
+    year: 2020,
+    recordsCount: '45 glacier profiles',
+    abstract: 'Comprehensive multi-sensor study documenting mass balance changes across major Himalayan glaciers, with implications for regional water security.'
+  },
+  {
+    id: '6',
+    title: 'Extremophile Microbial Communities in Antarctic Lake Ice Covers',
+    station: 'Bharati',
+    realm: 'Antarctica',
+    discipline: 'Extremophile Biology',
+    year: 2025,
+    recordsCount: '180 genomic sequences',
+    abstract: 'Metagenomic profiling of microbial mats surviving in permanently ice-covered Antarctic lakes, offering clues for astrobiology and ancient life limits.'
+  }
 ];
 
-function LineChart({ paper }: { paper: ResearchPaper }) {
-  const chart = paper.chart[0];
-  const points = chart.points;
-  const xs = points.map((p) => p.x);
-  const ys = points.map((p) => p.y);
-  const xMin = Math.min(...xs);
-  const xMax = Math.max(...xs);
-  const yMin = Math.min(...ys);
-  const yMax = Math.max(...ys);
-  const W = 400;
-  const H = 200;
-  const pad = 40;
-
-  const sx = (x: number) => pad + ((x - xMin) / (xMax - xMin || 1)) * (W - pad * 2);
-  const sy = (y: number) => H - pad - ((y - yMin) / (yMax - yMin || 1)) * (H - pad * 2);
-
-  const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${sx(p.x)} ${sy(p.y)}`).join(' ');
-  const areaPath = `${path} L ${sx(points[points.length - 1].x)} ${H - pad} L ${sx(points[0].x)} ${H - pad} Z`;
-
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
-      <defs>
-        <linearGradient id={`grad-${paper.id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {/* Grid lines */}
-      {[0, 0.25, 0.5, 0.75, 1].map((t) => (
-        <line
-          key={t}
-          x1={pad}
-          y1={pad + t * (H - pad * 2)}
-          x2={W - pad}
-          y2={pad + t * (H - pad * 2)}
-          stroke="#1c2748"
-          strokeWidth="0.5"
-        />
-      ))}
-      {/* Area */}
-      <path d={areaPath} fill={`url(#grad-${paper.id})`} />
-      {/* Line */}
-      <path d={path} fill="none" stroke="#06b6d4" strokeWidth="2" strokeLinejoin="round" />
-      {/* Points */}
-      {points.map((p, i) => (
-        <g key={i}>
-          <circle cx={sx(p.x)} cy={sy(p.y)} r="4" fill="#070b19" stroke="#38bdf8" strokeWidth="2" />
-        </g>
-      ))}
-      {/* Y-axis labels */}
-      {[0, 0.5, 1].map((t) => (
-        <text
-          key={t}
-          x={pad - 8}
-          y={pad + t * (H - pad * 2) + 4}
-          fill="#64748b"
-          fontSize="10"
-          fontFamily="monospace"
-          textAnchor="end"
-        >
-          {(yMax - t * (yMax - yMin)).toFixed(0)}
-        </text>
-      ))}
-      {/* X-axis labels */}
-      {[0, 0.5, 1].map((t) => (
-        <text
-          key={t}
-          x={pad + t * (W - pad * 2)}
-          y={H - pad + 16}
-          fill="#64748b"
-          fontSize="10"
-          fontFamily="monospace"
-          textAnchor="middle"
-        >
-          {(xMin + t * (xMax - xMin)).toFixed(0)}
-        </text>
-      ))}
-      {/* Axis labels */}
-      <text x={W / 2} y={H - 4} fill="#94a3b8" fontSize="10" textAnchor="middle">
-        {chart.xLabel}
-      </text>
-      <text x={12} y={H / 2} fill="#94a3b8" fontSize="10" textAnchor="middle" transform={`rotate(-90 12 ${H / 2})`}>
-        {chart.yLabel}
-      </text>
-    </svg>
-  );
+interface ResearchProps {
+  externalSearchQuery?: string;
+  onClearSearch?: () => void;
 }
 
-function Dropdown({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: string[];
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-4 py-2.5 glass-panel rounded-lg hover:border-frost-cyan/30 transition-colors w-full min-w-[160px]"
-      >
-        <span className="text-xs text-slate-500 font-mono shrink-0">{label}</span>
-        <span className="text-sm text-white font-medium flex-1 text-left truncate">{value}</span>
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute top-full mt-1 left-0 right-0 z-20 glass-panel rounded-lg overflow-hidden animate-scale-in">
-            {options.map((opt) => (
-              <button
-                key={opt}
-                onClick={() => {
-                  onChange(opt);
-                  setOpen(false);
-                }}
-                className={`w-full px-4 py-2.5 text-left text-sm hover:bg-frost-cyan/10 transition-colors ${
-                  value === opt ? 'text-frost-cyan bg-frost-cyan/5' : 'text-slate-300'
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
+export default function Research({ externalSearchQuery = '', onClearSearch }: ResearchProps) {
+  const [selectedRealm, setSelectedRealm] = useState('All');
+  const [selectedDiscipline, setSelectedDiscipline] = useState('All');
+  const [activeTag, setActiveTag] = useState<string>('');
 
-export default function Research() {
-  const [realm, setRealm] = useState('All');
-  const [station, setStation] = useState('All');
-  const [discipline, setDiscipline] = useState('All');
-  const [yearRange, setYearRange] = useState<[number, number]>([1981, 2026]);
-  const [activeChips, setActiveChips] = useState<string[]>([]);
-  const [quickLookPaper, setQuickLookPaper] = useState<ResearchPaper | null>(null);
+  useEffect(() => {
+    if (externalSearchQuery) {
+      setActiveTag(externalSearchQuery);
+    }
+  }, [externalSearchQuery]);
 
-  const filtered = useMemo(() => {
-    return researchPapers.filter((p) => {
-      if (realm !== 'All' && p.realm !== realm) return false;
-      if (station !== 'All' && p.station !== station) return false;
-      if (discipline !== 'All' && p.discipline !== discipline) return false;
-      if (p.year < yearRange[0] || p.year > yearRange[1]) return false;
-      if (activeChips.length > 0) {
-        const hasChip = activeChips.some((chip) => p.tags.includes(chip));
-        if (!hasChip) return false;
-      }
-      return true;
-    });
-  }, [realm, station, discipline, yearRange, activeChips]);
+  const quickTags = [
+    'Ozone Depletion',
+    'Ice Core δ18O',
+    'Microplastics',
+    'Geomagnetic Storms',
+    'Himalayan Glaciers',
+    'Extremophile'
+  ];
 
-  const toggleChip = (chip: string) => {
-    setActiveChips((prev) =>
-      prev.includes(chip) ? prev.filter((c) => c !== chip) : [...prev, chip]
-    );
+  const handleTagClick = (tag: string) => {
+    if (activeTag === tag) {
+      setActiveTag('');
+      if (onClearSearch) onClearSearch();
+    } else {
+      setActiveTag(tag);
+    }
   };
 
+  const filteredDatasets = datasets.filter((item) => {
+    const matchesRealm = selectedRealm === 'All' || item.realm.toLowerCase() === selectedRealm.toLowerCase();
+    const matchesDiscipline = selectedDiscipline === 'All' || item.discipline === selectedDiscipline;
+    const filterTerm = activeTag.toLowerCase();
+    const matchesTag =
+      filterTerm === '' ||
+      item.title.toLowerCase().includes(filterTerm) ||
+      item.discipline.toLowerCase().includes(filterTerm) ||
+      item.abstract.toLowerCase().includes(filterTerm);
+
+    return matchesRealm && matchesDiscipline && matchesTag;
+  });
+
   return (
-    <section id="research" className="relative py-20">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-[1px] bg-frost-cyan" />
-            <span className="text-xs font-mono text-frost-cyan tracking-widest">RESEARCH ENGINE</span>
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">Research & Data Engine</h2>
-          <p className="text-slate-400 max-w-2xl">
-            Search and filter across decades of polar expedition data. Filter by realm, station,
-            discipline, or expedition year to explore India's polar science legacy.
-          </p>
-        </div>
+    <div className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-white">
+      <div className="mb-8">
+        <span className="text-xs font-semibold text-cyan-400 tracking-wider uppercase">Research Engine</span>
+        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mt-1">Research & Data Engine</h2>
+        <p className="text-slate-400 text-sm sm:text-base mt-2 max-w-3xl">
+          Search and filter across decades of polar expedition data by station, discipline, or expedition topic.
+        </p>
+      </div>
 
-        {/* Filter Bar */}
-        <div className="glass-panel rounded-2xl p-5 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-4 h-4 text-frost-cyan" />
-            <span className="text-sm font-medium text-slate-300">Filters</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-            <Dropdown label="Realm" options={realms} value={realm} onChange={setRealm} />
-            <Dropdown label="Station" options={stationNames} value={station} onChange={setStation} />
-            <Dropdown
-              label="Discipline"
-              options={disciplines}
-              value={discipline}
-              onChange={setDiscipline}
-            />
-            <div className="flex flex-col gap-1 px-4 py-2.5 glass-panel rounded-lg">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500 font-mono">Expedition Year</span>
-                <span className="text-xs font-mono text-frost-cyan">
-                  {yearRange[0]} – {yearRange[1]}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <input
-                  type="range"
-                  min={1981}
-                  max={2026}
-                  value={yearRange[0]}
-                  onChange={(e) =>
-                    setYearRange([Math.min(Number(e.target.value), yearRange[1]), yearRange[1]])
-                  }
-                  className="w-full"
-                />
-                <input
-                  type="range"
-                  min={1981}
-                  max={2026}
-                  value={yearRange[1]}
-                  onChange={(e) =>
-                    setYearRange([yearRange[0], Math.max(Number(e.target.value), yearRange[0])])
-                  }
-                  className="w-full"
-                />
-              </div>
-            </div>
+      {/* Filter and Quick Tags Bar */}
+      <div className="bg-slate-900/70 border border-slate-800 p-5 rounded-2xl backdrop-blur-md mb-8 space-y-4 shadow-xl">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1.5">Polar Realm</label>
+            <select
+              value={selectedRealm}
+              onChange={(e) => setSelectedRealm(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+            >
+              <option value="All">All Realms</option>
+              <option value="Antarctica">Antarctica</option>
+              <option value="Arctic">Arctic</option>
+              <option value="Himalayas">Himalayas</option>
+              <option value="Southern Ocean">Southern Ocean</option>
+            </select>
           </div>
 
-          {/* Filter Chips */}
-          <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-polar-border">
-            <span className="text-xs text-slate-500 font-mono mr-1">Quick tags:</span>
-            {filterChips.map((chip) => (
-              <button
-                key={chip}
-                onClick={() => toggleChip(chip)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border ${
-                  activeChips.includes(chip)
-                    ? 'bg-frost-cyan/20 border-frost-cyan/50 text-frost-cyan'
-                    : 'bg-polar-card border-polar-border text-slate-400 hover:border-frost-cyan/30 hover:text-slate-200'
-                }`}
-              >
-                {chip}
-              </button>
-            ))}
-            {(activeChips.length > 0 ||
-              realm !== 'All' ||
-              station !== 'All' ||
-              discipline !== 'All' ||
-              yearRange[0] !== 1981 ||
-              yearRange[1] !== 2026) && (
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1.5">Discipline</label>
+            <select
+              value={selectedDiscipline}
+              onChange={(e) => setSelectedDiscipline(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+            >
+              <option value="All">All Disciplines</option>
+              <option value="Glaciology & Ice Cores">Glaciology & Ice Cores</option>
+              <option value="Atmospheric Physics">Atmospheric Physics</option>
+              <option value="Oceanography">Oceanography</option>
+              <option value="Space Weather & Magnetism">Space Weather & Magnetism</option>
+              <option value="Extremophile Biology">Extremophile Biology</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            {(selectedRealm !== 'All' || selectedDiscipline !== 'All' || activeTag !== '') && (
               <button
                 onClick={() => {
-                  setRealm('All');
-                  setStation('All');
-                  setDiscipline('All');
-                  setYearRange([1981, 2026]);
-                  setActiveChips([]);
+                  setSelectedRealm('All');
+                  setSelectedDiscipline('All');
+                  setActiveTag('');
+                  if (onClearSearch) onClearSearch();
                 }}
-                className="px-3 py-1.5 rounded-full text-xs font-medium text-slate-500 hover:text-slate-300 transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-cyan-300 transition"
               >
-                Clear all
+                <X className="w-3.5 h-3.5" /> Clear All Filters
               </button>
             )}
           </div>
         </div>
 
-        {/* Results count */}
-        <div className="mb-4 text-sm text-slate-500">
-          Showing <span className="text-frost-cyan font-medium">{filtered.length}</span> of{' '}
-          {researchPapers.length} datasets
+        {/* Quick Tag Pills */}
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-slate-800/80">
+          <span className="text-xs text-slate-500 font-medium">Quick tags:</span>
+          {quickTags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => handleTagClick(tag)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                activeTag.toLowerCase().includes(tag.toLowerCase().split(' ')[0])
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-sm shadow-cyan-950'
+                  : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Results Grid */}
-        {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((paper) => (
-              <div
-                key={paper.id}
-                className="glass-panel rounded-2xl p-5 hover:border-frost-cyan/30 transition-all duration-300 flex flex-col"
-              >
-                {/* Badges */}
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  <span className="px-2 py-0.5 rounded-md bg-frost-cyan/10 border border-frost-cyan/20 text-[10px] font-mono text-frost-cyan">
-                    {paper.station}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md bg-frost-blue/10 border border-frost-blue/20 text-[10px] font-mono text-frost-blue">
-                    {paper.realm}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-[10px] font-mono text-purple-300">
-                    {paper.discipline}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] font-mono text-amber-300">
-                    {paper.year}
-                  </span>
-                </div>
-
-                <h3 className="text-white font-semibold text-base leading-snug mb-2">
-                  {paper.title}
-                </h3>
-                <p className="text-sm text-slate-400 leading-relaxed mb-4 line-clamp-2">
-                  {paper.summary}
-                </p>
-
-                {/* Actions */}
-                <div className="mt-auto space-y-2">
-                  <button
-                    onClick={() => setQuickLookPaper(paper)}
-                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-frost-cyan/10 border border-frost-cyan/30 text-frost-cyan text-sm font-medium hover:bg-frost-cyan/20 transition-colors"
-                  >
-                    <Eye className="w-4 h-4" />
-                    Quick Look
-                  </button>
-                  <div className="flex gap-2">
-                    <button className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-polar-card border border-polar-border text-xs text-slate-400 hover:text-white hover:border-frost-cyan/20 transition-colors">
-                      <Download className="w-3.5 h-3.5" />
-                      PDF
-                    </button>
-                    <button className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-polar-card border border-polar-border text-xs text-slate-400 hover:text-white hover:border-frost-cyan/20 transition-colors">
-                      <Database className="w-3.5 h-3.5" />
-                      CSV
-                    </button>
-                    <button className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-polar-card border border-polar-border text-xs text-slate-400 hover:text-white hover:border-frost-cyan/20 transition-colors">
-                      <Quote className="w-3.5 h-3.5" />
-                      Cite
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="glass-panel rounded-2xl p-16 text-center">
-            <FileText className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400 text-lg">No datasets match your current filters.</p>
-            <p className="text-slate-600 text-sm mt-2">Try adjusting or clearing your filters.</p>
-          </div>
+      {/* Results Counter */}
+      <div className="text-xs text-slate-400 mb-4 flex items-center justify-between">
+        <span>Showing <strong className="text-cyan-300">{filteredDatasets.length}</strong> of {datasets.length} datasets</span>
+        {activeTag && (
+          <span className="text-cyan-400">
+            Filtered by: <span className="underline font-semibold">{activeTag}</span>
+          </span>
         )}
       </div>
 
-      {/* Quick Look Drawer */}
-      {quickLookPaper && (
-        <div
-          className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm animate-fade-in"
-          onClick={() => setQuickLookPaper(null)}
-        >
+      {/* Dataset Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {filteredDatasets.map((ds) => (
           <div
-            className="absolute right-0 top-0 bottom-0 w-full max-w-xl glass-panel border-l border-frost-cyan/20 overflow-y-auto animate-slide-in-right"
-            onClick={(e) => e.stopPropagation()}
+            key={ds.id}
+            className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col justify-between hover:border-cyan-500/40 transition duration-200 backdrop-blur-md shadow-xl"
           >
-            <div className="sticky top-0 bg-polar-surface/90 backdrop-blur-md px-6 py-4 border-b border-polar-border flex items-center justify-between z-10">
-              <div className="flex items-center gap-2">
-                <Eye className="w-5 h-5 text-frost-cyan" />
-                <span className="font-semibold text-white">Quick Look</span>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap mb-3 text-[10px] font-semibold">
+                <span className="px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30 text-cyan-300">
+                  {ds.station}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+                  {ds.realm}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-indigo-950/70 border border-indigo-500/30 text-indigo-300">
+                  {ds.discipline}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-amber-950/60 border border-amber-500/30 text-amber-300">
+                  {ds.year}
+                </span>
               </div>
-              <button
-                onClick={() => setQuickLookPaper(null)}
-                className="p-2 hover:bg-polar-card rounded-md transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
+
+              <h3 className="text-sm font-bold text-white mb-2 leading-snug">
+                {ds.title}
+              </h3>
+
+              <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 mb-4">
+                {ds.abstract}
+              </p>
             </div>
-            <div className="p-6">
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                <span className="px-2 py-0.5 rounded-md bg-frost-cyan/10 border border-frost-cyan/20 text-[10px] font-mono text-frost-cyan">
-                  {quickLookPaper.station}
-                </span>
-                <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] font-mono text-amber-300">
-                  {quickLookPaper.year}
-                </span>
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">{quickLookPaper.title}</h3>
-              <p className="text-sm text-slate-400 leading-relaxed mb-6">{quickLookPaper.summary}</p>
 
-              {/* Chart */}
-              <div className="glass-panel rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Calendar className="w-4 h-4 text-frost-cyan" />
-                  <span className="text-sm font-medium text-slate-200">
-                    {quickLookPaper.chart[0].label}
-                  </span>
-                </div>
-                <LineChart paper={quickLookPaper} />
-              </div>
-
-              {/* Tags */}
-              <div className="mt-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Tag className="w-4 h-4 text-slate-500" />
-                  <span className="text-xs font-mono text-slate-500">Tags</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {quickLookPaper.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-3 py-1 rounded-full bg-polar-card border border-polar-border text-xs text-slate-400"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+            <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
+              <span className="text-[11px] text-slate-500 font-mono">{ds.recordsCount}</span>
+              <div className="flex items-center gap-1.5">
+                <button 
+                  onClick={() => alert(`Opening Data Preview: ${ds.title}`)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs flex items-center gap-1 border border-slate-700 transition"
+                >
+                  <Eye className="w-3 h-3 text-cyan-400" /> Preview
+                </button>
+                <button 
+                  onClick={() => alert(`Downloading CSV records for ${ds.title}...`)}
+                  className="px-2.5 py-1 rounded-lg bg-cyan-950 hover:bg-cyan-900 border border-cyan-500/30 text-cyan-300 text-xs flex items-center gap-1 transition"
+                >
+                  <Download className="w-3 h-3" /> CSV
+                </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </section>
+        ))}
+      </div>
+    </div>
   );
 }
